@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모코 카카오톡 분석기</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .upload-section:hover {
+            transform: translateY(-5px);
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 50px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.drag-over {
+            border-color: #4CAF50;
+            background: #e8f5e8;
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .results-section {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .results-header h2 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .debug-toggle {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+        }
+
+        .debug-toggle:hover {
+            background: #5a6268;
+        }
+
+        .debug-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 200px;
+            overflow-y: auto;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+
+        .debug-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            margin-bottom: 30px;
+            height: 400px;
+            position: relative;
+            display: block;
+        }
+
+        .chart-container.hidden {
+            display: none;
+        }
+
+        .keyword-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .keyword-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .keyword-header h3 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .keyword-search-section {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #e3e7ff;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #d1d5db;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .search-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .search-result {
+            display: none;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .keyword-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .keyword-stat {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .keyword-stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .keyword-stat-label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .keyword-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 25px;
+            min-height: 150px;
+            align-items: center;
+        }
+
+        .keyword-item {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .keyword-item:hover {
+            transform: scale(1.1);
+        }
+
+        .keyword-item::after {
+            content: attr(data-count);
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .emotion-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .emotion-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .emotion-header h3 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .emotion-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .emotion-stat {
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .emotion-stat.positive {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .emotion-stat.negative {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .emotion-stat.neutral {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+            color: white;
+        }
+
+        .emotion-stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .emotion-stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .emotion-chart-container {
+            height: 300px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .table-container, .keyword-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .keyword-table-container {
+            max-height: 300px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background: #f8f9ff;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #e74c3c;
+            background: #ffeaea;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .reset-btn, .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .reset-btn:hover, .copy-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .copy-btn {
+            background: #27ae60;
+        }
+
+        .copy-btn:hover {
+            background: #229954;
+        }
+
+        .copy-success {
+            color: #27ae60;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .copy-success.show {
+            opacity: 1;
+        }
+
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌙 모코 카카오톡 분석기</h1>
+            <p>카카오톡 채팅 파일을 업로드하여 날짜별 대화량을 분석해보세요</p>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">카카오톡 채팅 파일을 선택하거나 여기에 드래그하세요</div>
+                <div class="upload-subtext">지원 형식: .txt 파일</div>
+            </div>
+            <input type="file" id="fileInput" accept=".txt" />
+            
+            <div class="loading">
+                <div class="spinner"></div>
+                <div>파일을 분석 중입니다...</div>
+            </div>
+            
+            <div class="error"></div>
+        </div>
+
+        <div class="results-section">
+            <div class="results-header">
+                <h2>📊 분석 결과</h2>
+                <button class="debug-toggle" onclick="toggleDebug()">🔍 디버그 정보 보기</button>
+            </div>
+
+            <div class="debug-section" id="debugSection">
+                <div class="debug-title">파일 분석 디버그 정보</div>
+                <div id="debugContent"></div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalMessages">0</div>
+                    <div class="stat-label">총 메시지 수</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalDays">0</div>
+                    <div class="stat-label">대화 일수</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgMessages">0</div>
+                    <div class="stat-label">일평균 메시지</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="maxMessages">0</div>
+                    <div class="stat-label">최대 일 메시지</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="chatChart"></canvas>
+            </div>
+
+            <div class="keyword-section">
+                <div class="keyword-header">
+                    <h3>🔍 핵심 키워드 분석</h3>
+                    <p style="color: #666; font-size: 0.9rem;">대화의 핵심 주제와 관심사를 분석했습니다 (2글자 이상, 2회 이상 언급)</p>
+                </div>
+
+                <div class="keyword-search-section">
+                    <div class="search-box">
+                        <input type="text" class="search-input" id="keywordSearchInput" placeholder="특정 키워드가 얼마나 언급되었는지 검색해보세요...">
+                        <button class="search-btn" onclick="searchKeyword()">🔍 검색</button>
+                    </div>
+                    <div class="search-result" id="searchResult">
+                        <!-- 검색 결과가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+
+                <div class="keyword-stats">
+                    <div class="keyword-stat">
+                        <div class="keyword-stat-number" id="totalWords">0</div>
+                        <div class="keyword-stat-label">총 단어 수</div>
+                    </div>
+                    <div class="keyword-stat">
+                        <div class="keyword-stat-number" id="uniqueWords">0</div>
+                        <div class="keyword-stat-label">고유 단어 수</div>
+                    </div>
+                    <div class="keyword-stat">
+                        <div class="keyword-stat-number" id="avgWordsPerMessage">0</div>
+                        <div class="keyword-stat-label">메시지당 평균 단어</div>
+                    </div>
+                </div>
+
+                <div class="keyword-cloud" id="keywordCloud">
+                    <!-- 키워드들이 여기에 동적으로 추가됩니다 -->
+                </div>
+
+                <div class="keyword-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>순위</th>
+                                <th>키워드</th>
+                                <th>빈도</th>
+                                <th>비율</th>
+                            </tr>
+                        </thead>
+                        <tbody id="keywordTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="emotion-section">
+                <div class="emotion-header">
+                    <h3>😊 감정 분석</h3>
+                    <p style="color: #666; font-size: 0.9rem;">대화의 전반적인 감정과 분위기를 분석했습니다</p>
+                </div>
+
+                <div class="emotion-stats">
+                    <div class="emotion-stat positive">
+                        <div class="emotion-stat-number" id="positiveCount">0</div>
+                        <div class="emotion-stat-label">긍정 메시지</div>
+                    </div>
+                    <div class="emotion-stat negative">
+                        <div class="emotion-stat-number" id="negativeCount">0</div>
+                        <div class="emotion-stat-label">부정 메시지</div>
+                    </div>
+                    <div class="emotion-stat neutral">
+                        <div class="emotion-stat-number" id="neutralCount">0</div>
+                        <div class="emotion-stat-label">중립 메시지</div>
+                    </div>
+                </div>
+
+                <div class="emotion-chart-container">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>메시지 수</th>
+                            <th>비율</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTable">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="button-container">
+                <button class="copy-btn" onclick="copyResults()">📋 결과 복사하기</button>
+                <button class="reset-btn" onclick="resetAnalysis()">🔄 새 파일 분석하기</button>
+                <div class="copy-success" id="copySuccess">클립보드에 복사되었습니다!</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chatChart = null;
+        let emotionChart = null;
+        let analysisData = null;
+        let keywordData = null;
+        let emotionData = null;
+        let allMessageTexts = [];
+
+        // 한국어 불용어 리스트 (대폭 확장)
+        const stopWords = new Set([
+            // ⭐ 사용자 지정 제거 단어들 (우선 추가)
+            '저도', '그럼', '혹시', '저는', '요즘', '이제', '님들', '이거', '이게',
+            
+            // 기본 조사/어미
+            '이', '가', '을', '를', '은', '는', '에', '에서', '로', '으로', '와', '과', '의', '도', '만', '까지', '부터', '마저', '조차', '한테', '께', '에게', '로부터', '으로부터',
+            '다', '야', '이다', '있다', '없다', '하다', '되다', '이야', '네', '지', '요', '습니다', '입니다', '었다', '았다', '겠다', '어요', '아요', '해요', '해', '한다', '한다고',
+            '좋아요', '있어요', '그래도', '해도', '된다', '안돼', '됐다', '된답니다', '했어요', '할게요', '할까요', '해줘요', '해주세요',
+            
+            // 대명사 + 조사 조합 (대폭 확장)
+            '나', '너', '우리', '저', '제', '제가', '당신', '그', '이', '저', '그것', '이것', '저것', '이거', '그거', '저거', '요거', '여기', '거기', '저기', '어디', '누구', '뭐', '무엇', '몇',
+            '나도', '너도', '우리도', '제도', '저도', '그도', '이것도', '그것도', '저것도',
+            '나는', '너는', '우리는', '제는', '저는', '그는', '이건', '그건', '저건',
+            '나를', '너를', '우리를', '저를', '그를', '이걸', '그걸', '저걸',
+            '나한테', '너한테', '저한테', '우리한테', '그한테',
+            '여기서', '거기서', '저기서', '어디서', '언제서', '뭐에서',
+            '이런', '그런', '저런', '요런', '어떤', '무슨', '어느',
+            '이렇게', '그렇게', '저렇게', '요렇게', '어떻게',
+            '이때', '그때', '저때', '언제', '어느때',
+            '자기', '자신', '우리들', '너희', '그들', '타인', '것', '것들', '분', '명', '개', '번',
+            
+            // 시간/상황 부사 (대폭 확장)
+            '요즘', '이제', '지금', '오늘', '어제', '내일', '모레', '글피', '그제', '엊그제',
+            '아까', '방금', '나중에', '이따', '이따가', '잠깐', '잠시', '순간', '때때로',
+            '벌써', '아직', '여전히', '계속', '다시', '또', '또다시', '다음에', '이번에', '저번에',
+            '처음', '마지막', '항상', '늘', '언제나', '가끔', '종종', '자주', '때론', '때때로',
+            '일단', '우선', '먼저', '나중', '결국', '마침내', '드디어',
+            
+            // 추측/가정/확인 표현 (대폭 확장)
+            '혹시', '그럼', '만약', '아마', '혹은', '아니면', '그러면', '그렇다면', '만일',
+            '아무래도', '어쩐지', '왠지', '그냥', '역시', '역시나', '당연히', '물론', '확실히',
+            '진짜', '정말', '맞아', '그래', '응', '네', '맞네', '그치', '맞지', '그러게',
+            '설마', '과연', '정말로', '진짜로', '실제로', '사실', '실은', '솔직히',
+            
+            // 호칭/지칭 (대폭 확장)
+            '님들', '형들', '언니들', '누나들', '동생들', '친구들', '사람들',
+            '여러분', '모두들', '다들', '모두', '전부', '모든', '각자',
+            '형', '누나', '언니', '동생', '친구', '선배', '후배', '동료',
+            '어른', '아이', '애들', '꼬마', '아가', '아기',
+            
+            // 감정/반응 표현 (대폭 확장)
+            '어머', '어머나', '세상에', '이런', '저런', '그런', '놀랍다', '신기하다', '재밌다', '웃기다', '귀엽다',
+            '아싸', '야호', '와우', '짱', '쩔어', '대박', '미쳤다', '끝내준다', '최고',
+            '어이구', '에구', '아이고', '아이구', '아이쿠', '어휴', '헉', '어라', '어', '음',
+            
+            // 인사말/안부 (확장)
+            '안녕', '안녕하세요', '안녕히', '반갑다', '반가워', '반갑습니다', '고마워', '고맙다', '고맙습니다', '감사', '감사해', '감사합니다', '죄송', '죄송해', '죄송합니다', '미안', '미안해', '미안합니다',
+            '수고', '수고해', '수고하세요', '잘자', '잘자요', '안녕히주무세요', '좋은꿈', '굿나잇', '하이', '바이', '안녕히가세요', '안녕히계세요',
+            '어서와', '어서오세요', '환영', '환영해', '환영합니다',
+            
+            // 감탄사/추임새 (확장)
+            '아', '어', '오', '우', '음', '응', '네', '예', '아니', '맞아', '그래', '어쩌지', '어떻게', '왜', '언제', '어디서', '헉', '와', '우와', '오호', '아하', '그렇구나',
+            '어머', '어머나', '세상에', '이런', '저런', '그런', '어이', '어이구', '아이고', '아이구', '아이쿠',
+            
+            // 줄임말/인터넷 용어 (확장)
+            'ㅋ', 'ㅋㅋ', 'ㅋㅋㅋ', 'ㅎ', 'ㅎㅎ', 'ㅠ', 'ㅠㅠ', 'ㅜ', 'ㅜㅜ', 'ㅡ', 'ㅡㅡ', 'ㄹㅇ', 'ㄷㄷ', 'ㅇㅇ', 'ㄱㅅ', 'ㄴㄴ', 'ㅁㄴ', 'ㅂㅂ',
+            '헤', '하', '호', '히', '흠', '음', '엠', '잼', '넘', '겁', '막', '딱', '완', '쫌', '존', '졸', '레알', '진짜', '정말', '완전', '엄청', '개', '겁나', '무릎',
+            '대박', '쩐다', '쩔어', '미쳤', '최고', '짱', '킹', '갓', '레전드', '역시', '당연', '물론', '맞다', '틀렸', '맞네', '그치',
+            'ㄱㄱ', 'ㄱㅇ', 'ㅇㄱ', 'ㅊㅊ', 'ㅂㅇ', 'ㅇㅂ', 'ㅎㅇ', 'ㅇㅎ',
+            
+            // 문장 연결어/접속사 (대폭 확장)
+            '그리고', '그런데', '근데', '하지만', '그러나', '또', '또한', '역시', '물론', '그냥', '좀', '많이', '조금', '약간', '아주', '매우', '너무', '꽤', '상당히', '별로', '그다지',
+            '그래서', '그러니까', '그러니', '그러므로', '따라서', '그러면', '그럼',
+            '아무튼', '어쨌든', '하여튼', '뭔가', '뭔지', '뭔데', '왜냐하면', '왜냐면',
+            '하긴', '그래도', '그런데도', '그럼에도', '그렇지만', '그렇다고',
+            
+            // 기본 동사/형용사 (확장)
+            '거나', '거든', '니까', '까지', '부터', '같이', '함께', '혼자', '계속', '다시', '또다시', '보내', '받아', '확인', '알겠', '알았', '모르', '몰라',
+            '생각', '마음', '기분', '느낌', '정도', '이상', '이하', '정말로', '진짜로', '사실', '실제로', '잘', '못', '안',
+            '되네', '되다', '된다', '되니', '되나', '되냐', '되지', '되는구나',
+            '좋다', '좋네', '좋은', '나쁘다', '나쁘네', '안좋다',
+            
+            // 카카오톡 관련 단어들 (확장)
+            '이모티콘', '사진', '동영상', '파일', '링크', '전화', '통화', '메시지', '톡', '카톡', '단톡', '오픈채팅', '수다방', '정보', '공지', '알림',
+            '입장', '퇴장', '초대', '나갔습니다', '들어왔습니다', '님이', '참여', '떠남', '들어옴', '나감',
+            '읽음', '안읽음', '확인', '미확인', '답장', '답변', '대답',
+            
+            // 기타 불필요한 표현들 (확장)
+            ';;', '...', '..', '!', '?', '!!', '??', '???', '!!!', '네네', '응응', '엥', '어어', '우우', '아아', '에에', '흐흐', '히히', '호호', '후후',
+            
+            // URL/기술 관련 (확장)
+            'http', 'https', 'www', 'com', 'co', 'kr', 'net', 'org', 'html', 'php', 'asp', 'jpg', 'png', 'gif', 'mp4', 'avi',
+            'link', 'url', 'site', 'web', 'page',
+            
+            // 기타 채팅 특화 단어들 (확장)
+            '하이', '바이', '굿', '오케이', '오키', 'ok', 'OK', 'okay', '응당', '당장', '바로', '곧', '즉시', '잠깐', '잠시',
+            '어떻게든', '아무튼', '어찌됐든', '어쨌든', '하여튼', '아무래도',
+            
+            // 의문사/질문 표현 (확장)
+            '뭐', '뭔가', '뭔데', '뭔지', '무엇', '무슨', '어떤', '어느', '몇', '얼마',
+            '어디', '언제', '누구', '왜', '어떻게', '어찌', '어째서',
+            '그게뭐', '뭔소리', '무슨말', '어떤말', '무슨뜻'
+        ]);
+
+        // 감정 분석용 단어 사전
+        const emotionWords = {
+            positive: new Set([
+                '좋다', '좋아', '좋네', '좋은', '좋겠다', '기쁘다', '기뻐', '행복', '행복해', '즐겁다', '즐거워', '신나다', '신나', '재밌다', '재미있다', '웃기다', '웃겨',
+                '사랑', '사랑해', '고마워', '고맙다', '감사', '최고', '완벽', '훌륭', '멋지다', '멋져', '예쁘다', '예뻐', '귀엽다', '귀여워', '아름답다', '아름다워',
+                '성공', '승리', '대박', '짱', '굿', '오케이', '좋았어', '완전', '진짜좋다', '마음에든다', '만족', '흥미', '관심', '기대', '희망', '꿈', '목표',
+                '화이팅', '힘내', '잘했어', '수고했어', '대단해', '놀라워', '신기해', '와우', '우와', '헉좋네', '개좋아', '존좋', '레전드', '갓', '킹왕짱'
+            ]),
+            negative: new Set([
+                '싫다', '싫어', '나쁘다', '나빠', '못하다', '못해', '안좋다', '안좋아', '화나다', '화나', '짜증', '짜증나', '스트레스', '피곤', '피곤해',
+                '슬프다', '슬퍼', '우울', '우울해', '힘들다', '힘들어', '어렵다', '어려워', '아프다', '아파', '죽겠다', '미치겠다', '답답', '답답해',
+                '실망', '실망이야', '후회', '걱정', '불안', '무서워', '두렵다', '당황', '놀랐다', '놀라', '충격', '멘붕', '망했다', '실패', '포기',
+                '별로', '최악', '끔찍', '지겹다', '지겨워', '재미없다', '재미없어', '빡쳐', '열받아', '모르겠다', '몰라', '막막', '막막해'
+            ])
+        };
+
+        // 파일 업로드 이벤트
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+
+        // 키워드 검색 Enter 키 지원
+        document.getElementById('keywordSearchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchKeyword();
+            }
+        });
+
+        // 드래그 앤 드롭 이벤트
+        const uploadArea = document.querySelector('.upload-area');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        });
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        async function processFile(file) {
+            if (!file.name.endsWith('.txt')) {
+                showError('txt 파일만 업로드 가능합니다.');
+                return;
+            }
+
+            showLoading();
+            hideError();
+
+            try {
+                const text = await file.text();
+                const data = parseKakaoChat(text);
+                
+                if (data.length === 0) {
+                    throw new Error('유효한 카카오톡 채팅 데이터를 찾을 수 없습니다.');
+                }
+
+                analysisData = data;
+                displayResults(data);
+                hideLoading();
+                
+            } catch (error) {
+                hideLoading();
+                showError('파일 처리 중 오류가 발생했습니다: ' + error.message);
+            }
+        }
+
+        function parseKakaoChat(text) {
+            const lines = text.split('\n');
+            const messageCounts = {};
+            const messageTexts = [];
+            let currentDate = null;
+            let totalLinesProcessed = 0;
+            let recognizedMessages = 0;
+            let debugInfo = [];
+            
+            debugInfo.push(`총 라인 수: ${lines.length}`);
+            debugInfo.push(`파일 크기: ${text.length} 문자`);
+            debugInfo.push(`\n처음 10줄 샘플:`);
+            lines.slice(0, 10).forEach((line, i) => {
+                debugInfo.push(`${i+1}: ${line}`);
+            });
+            debugInfo.push(`\n파싱 과정:`);
+
+            lines.forEach((line, index) => {
+                totalLinesProcessed++;
+                const trimmedLine = line.trim();
+                
+                if (!trimmedLine) return;
+
+                // 날짜 구분선 찾기
+                const dateSeparatorPatterns = [
+                    /(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*[월화수목금토일]요일/,
+                    /-+\s*(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일.*?-+/,
+                    /(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*[월화수목금토일]요일/,
+                    /(\d{4})-(\d{2})-(\d{2})/
+                ];
+
+                for (const pattern of dateSeparatorPatterns) {
+                    const match = trimmedLine.match(pattern);
+                    if (match) {
+                        const year = match[1];
+                        const month = match[2].padStart(2, '0');
+                        const day = match[3].padStart(2, '0');
+                        currentDate = `${year}-${month}-${day}`;
+                        debugInfo.push(`날짜 구분선 발견: ${currentDate} (라인 ${index + 1})`);
+                        return;
+                    }
+                }
+
+                // 메시지 라인 찾기
+                const messagePatterns = [
+                    {pattern: /[오전후]\s*(\d{1,2}):(\d{2}),\s*([^:]+)\s*:\s*(.+)/, messageIndex: 4},
+                    {pattern: /(.+?)\s+[오전후]\s*(\d{1,2}):(\d{2})\s*:\s*(.+)/, messageIndex: 4},
+                    {pattern: /\[([^\]]+)\]\s*\[[오전후]\s*(\d{1,2}):(\d{2})\]\s*(.+)/, messageIndex: 4},
+                    {pattern: /([^:]+)\s*:\s*(.+)/, messageIndex: 2}
+                ];
+
+                let messageFound = false;
+                for (const {pattern, messageIndex} of messagePatterns) {
+                    const match = trimmedLine.match(pattern);
+                    if (match && match[0].length > 10) {
+                        messageFound = true;
+                        recognizedMessages++;
+                        
+                        const messageText = match[messageIndex];
+                        if (messageText && messageText.trim().length > 0) {
+                            messageTexts.push(messageText.trim());
+                        }
+                        
+                        let messageDate = currentDate;
+                        
+                        if (!messageDate) {
+                            const lineWithDate = /(\d{4})[\.\-년\s]*(\d{1,2})[\.\-월\s]*(\d{1,2})/;
+                            const dateMatch = trimmedLine.match(lineWithDate);
+                            if (dateMatch) {
+                                const year = dateMatch[1];
+                                const month = dateMatch[2].padStart(2, '0');
+                                const day = dateMatch[3].padStart(2, '0');
+                                messageDate = `${year}-${month}-${day}`;
+                            }
+                        }
+                        
+                        if (messageDate) {
+                            messageCounts[messageDate] = (messageCounts[messageDate] || 0) + 1;
+                            if (index < 20) {
+                                debugInfo.push(`메시지 발견: ${messageDate} (라인 ${index + 1})`);
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                if (!messageFound && trimmedLine.includes(':') && trimmedLine.length > 5) {
+                    const simpleParts = trimmedLine.split(':');
+                    if (simpleParts.length >= 2 && simpleParts[0].length < 30 && simpleParts[1].trim().length > 0) {
+                        recognizedMessages++;
+                        messageTexts.push(simpleParts.slice(1).join(':').trim());
+                        
+                        if (currentDate) {
+                            messageCounts[currentDate] = (messageCounts[currentDate] || 0) + 1;
+                            if (index < 20) {
+                                debugInfo.push(`간단 메시지: ${currentDate} (라인 ${index + 1})`);
+                            }
+                        }
+                    }
+                }
+            });
+
+            debugInfo.push(`\n분석 결과:`);
+            debugInfo.push(`처리된 라인: ${totalLinesProcessed}`);
+            debugInfo.push(`인식된 메시지: ${recognizedMessages}`);
+            debugInfo.push(`수집된 텍스트: ${messageTexts.length}개`);
+            debugInfo.push(`발견된 날짜 수: ${Object.keys(messageCounts).length}`);
+
+            // 키워드 분석 수행
+            keywordData = analyzeKeywords(messageTexts);
+            
+            // 감정 분석 수행
+            emotionData = analyzeEmotions(messageTexts);
+            
+            // 전체 메시지 텍스트 저장 (키워드 검색용)
+            allMessageTexts = messageTexts;
+            
+            debugInfo.push(`\n키워드 분석:`);
+            debugInfo.push(`총 단어 수: ${keywordData.totalWords}`);
+            debugInfo.push(`고유 단어 수: ${keywordData.uniqueWords}`);
+            debugInfo.push(`\n감정 분석:`);
+            debugInfo.push(`긍정: ${emotionData.positive}개, 부정: ${emotionData.negative}개, 중립: ${emotionData.neutral}개`);
+
+            window.lastDebugInfo = debugInfo;
+
+            if (recognizedMessages < totalLinesProcessed * 0.05) {
+                debugInfo.push(`\n⚠️ 경고: 메시지 인식률이 낮습니다 (${((recognizedMessages/totalLinesProcessed)*100).toFixed(1)}%)`);
+            }
+
+            return Object.entries(messageCounts)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([date, count]) => ({ date, count }));
+        }
+
+        function analyzeKeywords(messageTexts) {
+            if (!messageTexts || messageTexts.length === 0) {
+                return {
+                    totalWords: 0,
+                    uniqueWords: 0,
+                    avgWordsPerMessage: 0,
+                    keywords: []
+                };
+            }
+
+            const wordCounts = {};
+            let totalWords = 0;
+
+            messageTexts.forEach(text => {
+                const cleanText = text
+                    .replace(/[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .toLowerCase();
+
+                if (cleanText.length === 0) return;
+
+                const words = cleanText.split(' ');
+                
+                words.forEach(word => {
+                    const trimmedWord = word.trim();
+                    
+                    if (trimmedWord.length < 2) return;
+                    if (trimmedWord.length > 15) return;
+                    if (stopWords.has(trimmedWord)) return;
+                    if (/^\d+$/.test(trimmedWord)) return;
+                    if (/^[ㅋㅎㅠㅜㅡㅇㄱㄴㄷㄹㅁㅂㅅㅈㅊㅌㅍㅎ]+$/.test(trimmedWord)) return;
+                    if (/^[a-zA-Z]+$/.test(trimmedWord) && trimmedWord.length < 3) return;
+                    if (trimmedWord.includes('http')) return;
+                    if (trimmedWord.includes('www')) return;
+                    
+                    if (/(.)\1{2,}/.test(trimmedWord)) return;
+                    
+                    if (trimmedWord.includes('입장') || trimmedWord.includes('퇴장') || 
+                        trimmedWord.includes('초대') || trimmedWord.includes('나갔습니다') ||
+                        trimmedWord.includes('들어왔습니다')) return;
+
+                    totalWords++;
+                    wordCounts[trimmedWord] = (wordCounts[trimmedWord] || 0) + 1;
+                });
+            });
+
+            const filteredWordCounts = {};
+            Object.entries(wordCounts).forEach(([word, count]) => {
+                if (count >= 2) {
+                    filteredWordCounts[word] = count;
+                }
+            });
+
+            const sortedKeywords = Object.entries(filteredWordCounts)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 30)
+                .map(([word, count]) => ({
+                    word,
+                    count,
+                    percentage: ((count / totalWords) * 100).toFixed(1)
+                }));
+
+            return {
+                totalWords,
+                uniqueWords: Object.keys(filteredWordCounts).length,
+                avgWordsPerMessage: messageTexts.length > 0 ? Math.round(totalWords / messageTexts.length) : 0,
+                keywords: sortedKeywords
+            };
+        }
+
+        function analyzeEmotions(messageTexts) {
+            if (!messageTexts || messageTexts.length === 0) {
+                return { positive: 0, negative: 0, neutral: 0 };
+            }
+
+            let positiveCount = 0;
+            let negativeCount = 0;
+            let neutralCount = 0;
+
+            messageTexts.forEach(text => {
+                const cleanText = text.toLowerCase();
+                let hasPositive = false;
+                let hasNegative = false;
+
+                for (const word of emotionWords.positive) {
+                    if (cleanText.includes(word)) {
+                        hasPositive = true;
+                        break;
+                    }
+                }
+
+                for (const word of emotionWords.negative) {
+                    if (cleanText.includes(word)) {
+                        hasNegative = true;
+                        break;
+                    }
+                }
+
+                if (hasPositive && !hasNegative) {
+                    positiveCount++;
+                } else if (hasNegative && !hasPositive) {
+                    negativeCount++;
+                } else {
+                    neutralCount++;
+                }
+            });
+
+            return {
+                positive: positiveCount,
+                negative: negativeCount,
+                neutral: neutralCount,
+                total: messageTexts.length
+            };
+        }
+
+        function searchKeyword() {
+            const searchTerm = document.getElementById('keywordSearchInput').value.trim().toLowerCase();
+            const resultDiv = document.getElementById('searchResult');
+            
+            if (!searchTerm) {
+                resultDiv.style.display = 'none';
+                return;
+            }
+
+            if (!allMessageTexts || allMessageTexts.length === 0) {
+                resultDiv.innerHTML = '<strong>❌ 검색할 데이터가 없습니다.</strong> 먼저 파일을 분석해주세요.';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            let count = 0;
+            let examples = [];
+
+            allMessageTexts.forEach(text => {
+                const lowerText = text.toLowerCase();
+                if (lowerText.includes(searchTerm)) {
+                    count++;
+                    if (examples.length < 3) {
+                        examples.push(text.length > 50 ? text.substring(0, 50) + '...' : text);
+                    }
+                }
+            });
+
+            if (count === 0) {
+                resultDiv.innerHTML = `<strong>🔍 "${searchTerm}"</strong> 키워드를 찾을 수 없습니다.`;
+            } else {
+                const percentage = ((count / allMessageTexts.length) * 100).toFixed(1);
+                let resultHTML = `<strong>🎯 "${searchTerm}"</strong> 키워드가 <strong>${count}번</strong> 언급되었습니다 (전체 메시지의 ${percentage}%)`;
+                
+                if (examples.length > 0) {
+                    resultHTML += `<br><br><strong>📝 예시:</strong><br>`;
+                    examples.forEach((example, index) => {
+                        resultHTML += `${index + 1}. ${example}<br>`;
+                    });
+                }
+                resultDiv.innerHTML = resultHTML;
+            }
+            
+            resultDiv.style.display = 'block';
+        }
+
+        function displayKeywordAnalysis(keywordData) {
+            if (!keywordData || keywordData.keywords.length === 0) {
+                document.querySelector('.keyword-section').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('totalWords').textContent = keywordData.totalWords.toLocaleString();
+            document.getElementById('uniqueWords').textContent = keywordData.uniqueWords.toLocaleString();
+            document.getElementById('avgWordsPerMessage').textContent = keywordData.avgWordsPerMessage.toLocaleString();
+
+            createKeywordCloud(keywordData.keywords);
+            createKeywordTable(keywordData.keywords);
+        }
+
+        function displayEmotionAnalysis(emotionData) {
+            if (!emotionData) return;
+
+            document.getElementById('positiveCount').textContent = emotionData.positive.toLocaleString();
+            document.getElementById('negativeCount').textContent = emotionData.negative.toLocaleString();
+            document.getElementById('neutralCount').textContent = emotionData.neutral.toLocaleString();
+
+            createEmotionChart(emotionData);
+        }
+
+        function createEmotionChart(emotionData) {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js가 로드되지 않았습니다. 감정 차트를 생략합니다.');
+                return;
+            }
+
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+            
+            if (emotionChart) {
+                emotionChart.destroy();
+            }
+
+            const data = {
+                labels: ['😊 긍정', '😢 부정', '😐 중립'],
+                datasets: [{
+                    data: [emotionData.positive, emotionData.negative, emotionData.neutral],
+                    backgroundColor: [
+                        '#10b981',
+                        '#ef4444',
+                        '#6b7280'
+                    ],
+                    borderColor: '#ffffff',
+                    borderWidth: 2
+                }]
+            };
+
+            emotionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const percentage = ((context.parsed / emotionData.total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed}개 (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createKeywordCloud(keywords) {
+            const cloudContainer = document.getElementById('keywordCloud');
+            cloudContainer.innerHTML = '';
+
+            if (keywords.length === 0) {
+                cloudContainer.innerHTML = '<p style="color: #666; text-align: center; width: 100%; padding: 40px;">의미있는 키워드가 발견되지 않았습니다.<br><small>필터링이 강화되어 더 정확한 키워드만 표시됩니다.</small></p>';
+                return;
+            }
+
+            const topKeywords = keywords.slice(0, 15);
+            const maxCount = topKeywords[0].count;
+
+            topKeywords.forEach((keyword, index) => {
+                const keywordElement = document.createElement('div');
+                keywordElement.className = 'keyword-item';
+                keywordElement.textContent = keyword.word;
+                keywordElement.setAttribute('data-count', keyword.count);
+                
+                const sizeRatio = keyword.count / maxCount;
+                const fontSize = 0.9 + (sizeRatio * 0.8);
+                keywordElement.style.fontSize = `${fontSize}rem`;
+                
+                const hue = 220 + (index * 15);
+                const saturation = 60 + (sizeRatio * 20);
+                const lightness = 50 + (sizeRatio * 10);
+                keywordElement.style.background = `linear-gradient(135deg, hsl(${hue}, ${saturation}%, ${lightness}%), hsl(${hue + 30}, ${saturation}%, ${lightness - 5}%))`;
+                
+                if (index < 3) {
+                    keywordElement.style.fontWeight = 'bold';
+                }
+                
+                cloudContainer.appendChild(keywordElement);
+            });
+        }
+
+        function createKeywordTable(keywords) {
+            const tableBody = document.getElementById('keywordTable');
+            tableBody.innerHTML = '';
+
+            keywords.forEach((keyword, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${keyword.word}</strong></td>
+                    <td>${keyword.count.toLocaleString()}회</td>
+                    <td>${keyword.percentage}%</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function displayResults(data) {
+            const totalMessages = data.reduce((sum, item) => sum + item.count, 0);
+            const totalDays = data.length;
+            const avgMessages = totalDays > 0 ? Math.round(totalMessages / totalDays) : 0;
+            const maxMessages = data.length > 0 ? Math.max(...data.map(item => item.count)) : 0;
+
+            document.getElementById('totalMessages').textContent = totalMessages.toLocaleString();
+            document.getElementById('totalDays').textContent = totalDays.toLocaleString();
+            document.getElementById('avgMessages').textContent = avgMessages.toLocaleString();
+            document.getElementById('maxMessages').textContent = maxMessages.toLocaleString();
+
+            if (totalMessages < 10) {
+                const debugSection = document.getElementById('debugSection');
+                debugSection.style.display = 'block';
+                updateDebugInfo();
+                
+                const warningDiv = document.createElement('div');
+                warningDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 10px; margin-bottom: 20px;';
+                warningDiv.innerHTML = `
+                    <strong>⚠️ 분석 결과가 예상보다 적습니다!</strong><br>
+                    • 인식된 메시지: ${totalMessages}개<br>
+                    • 위의 디버그 정보를 확인하여 파일 형식을 점검해주세요<br>
+                    • 카카오톡 채팅방 → 설정 → 대화 내용 내보내기로 올바른 txt 파일인지 확인하세요
+                `;
+                
+                const resultsHeader = document.querySelector('.results-header');
+                resultsHeader.insertAdjacentElement('afterend', warningDiv);
+            }
+
+            createChart(data);
+            displayKeywordAnalysis(keywordData);
+            displayEmotionAnalysis(emotionData);
+            createTable(data, totalMessages);
+            
+            document.querySelector('.results-section').style.display = 'block';
+        }
+
+        function createChart(data) {
+            const chartContainer = document.querySelector('.chart-container');
+            
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js가 로드되지 않았습니다. 차트를 생략합니다.');
+                chartContainer.classList.add('hidden');
+                return;
+            }
+
+            chartContainer.classList.remove('hidden');
+            const ctx = document.getElementById('chatChart').getContext('2d');
+            
+            if (chatChart) {
+                chatChart.destroy();
+            }
+
+            const labels = data.map(item => {
+                const date = new Date(item.date);
+                return date.toLocaleDateString('ko-KR', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+            });
+
+            chatChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '일별 메시지 수',
+                        data: data.map(item => item.count),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+
+        function createTable(data, totalMessages) {
+            const tableBody = document.getElementById('dataTable');
+            tableBody.innerHTML = '';
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                const percentage = ((item.count / totalMessages) * 100).toFixed(1);
+                
+                const date = new Date(item.date);
+                const formattedDate = date.toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+
+                row.innerHTML = `
+                    <td>${formattedDate}</td>
+                    <td>${item.count.toLocaleString()}개</td>
+                    <td>${percentage}%</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function showLoading() {
+            document.querySelector('.loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.querySelector('.loading').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.querySelector('.error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.querySelector('.error').style.display = 'none';
+        }
+
+        function copyResults() {
+            if (!analysisData) return;
+
+            const totalMessages = analysisData.reduce((sum, item) => sum + item.count, 0);
+            const totalDays = analysisData.length;
+            const avgMessages = Math.round(totalMessages / totalDays);
+            const maxMessages = Math.max(...analysisData.map(item => item.count));
+
+            let copyText = `📊 카카오톡 채팅 분석 결과\n`;
+            copyText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            copyText += `📈 전체 통계\n`;
+            copyText += `• 총 메시지 수: ${totalMessages.toLocaleString()}개\n`;
+            copyText += `• 대화 일수: ${totalDays.toLocaleString()}일\n`;
+            copyText += `• 일평균 메시지: ${avgMessages.toLocaleString()}개\n`;
+            copyText += `• 최대 일 메시지: ${maxMessages.toLocaleString()}개\n\n`;
+            
+            if (keywordData && keywordData.keywords.length > 0) {
+                copyText += `🔍 핵심 키워드 분석\n`;
+                copyText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                copyText += `• 총 단어 수: ${keywordData.totalWords.toLocaleString()}개\n`;
+                copyText += `• 고유 단어 수: ${keywordData.uniqueWords.toLocaleString()}개\n`;
+                copyText += `• 메시지당 평균 단어: ${keywordData.avgWordsPerMessage.toLocaleString()}개\n\n`;
+                
+                copyText += `🏆 핵심 키워드 Top 10 (2글자 이상, 2회 이상)\n`;
+                copyText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                keywordData.keywords.slice(0, 10).forEach((keyword, index) => {
+                    copyText += `${index + 1}. ${keyword.word}: ${keyword.count}회 (${keyword.percentage}%)\n`;
+                });
+                copyText += `\n`;
+            }
+
+            if (emotionData) {
+                copyText += `😊 감정 분석\n`;
+                copyText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                const total = emotionData.total;
+                const positivePercent = ((emotionData.positive / total) * 100).toFixed(1);
+                const negativePercent = ((emotionData.negative / total) * 100).toFixed(1);
+                const neutralPercent = ((emotionData.neutral / total) * 100).toFixed(1);
+                
+                copyText += `• 😊 긍정 메시지: ${emotionData.positive.toLocaleString()}개 (${positivePercent}%)\n`;
+                copyText += `• 😢 부정 메시지: ${emotionData.negative.toLocaleString()}개 (${negativePercent}%)\n`;
+                copyText += `• 😐 중립 메시지: ${emotionData.neutral.toLocaleString()}개 (${neutralPercent}%)\n\n`;
+            }
+            
+            copyText += `📅 날짜별 상세 데이터\n`;
+            copyText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            
+            analysisData.forEach(item => {
+                const date = new Date(item.date);
+                const formattedDate = date.toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+                const percentage = ((item.count / totalMessages) * 100).toFixed(1);
+                copyText += `${formattedDate}: ${item.count.toLocaleString()}개 (${percentage}%)\n`;
+            });
+
+            copyText += `\n🌙 모코 카카오톡 분석기로 분석됨`;
+
+            navigator.clipboard.writeText(copyText).then(() => {
+                showCopySuccess();
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = copyText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showCopySuccess();
+            });
+        }
+
+        function showCopySuccess() {
+            const successDiv = document.getElementById('copySuccess');
+            successDiv.classList.add('show');
+            setTimeout(() => {
+                successDiv.classList.remove('show');
+            }, 2000);
+        }
+
+        function toggleDebug() {
+            const debugSection = document.getElementById('debugSection');
+            const isVisible = debugSection.style.display === 'block';
+            
+            if (isVisible) {
+                debugSection.style.display = 'none';
+            } else {
+                debugSection.style.display = 'block';
+                updateDebugInfo();
+            }
+        }
+
+        function updateDebugInfo() {
+            const debugContent = document.getElementById('debugContent');
+            if (window.lastDebugInfo) {
+                debugContent.innerHTML = window.lastDebugInfo.join('<br>');
+            } else {
+                debugContent.innerHTML = '디버그 정보가 없습니다. 파일을 다시 분석해주세요.';
+            }
+        }
+
+        function resetAnalysis() {
+            document.querySelector('.results-section').style.display = 'none';
+            document.querySelector('.chart-container').classList.remove('hidden');
+            document.getElementById('debugSection').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('keywordSearchInput').value = '';
+            document.getElementById('searchResult').style.display = 'none';
+            
+            const existingWarning = document.querySelector('.results-section').querySelector('div[style*="background: #fff3cd"]');
+            if (existingWarning) {
+                existingWarning.remove();
+            }
+            
+            if (chatChart) {
+                chatChart.destroy();
+                chatChart = null;
+            }
+
+            if (emotionChart) {
+                emotionChart.destroy();
+                emotionChart = null;
+            }
+            
+            document.getElementById('keywordCloud').innerHTML = '';
+            document.getElementById('keywordTable').innerHTML = '';
+            
+            analysisData = null;
+            keywordData = null;
+            emotionData = null;
+            allMessageTexts = [];
+            window.lastDebugInfo = null;
+        }
+    </script>
+</body>
+</html>
